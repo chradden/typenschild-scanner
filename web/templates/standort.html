@@ -73,6 +73,8 @@
                         <th>Strom</th>
                         <th>Effizienz</th>
                         <th>Schutzart</th>
+                        <th>Laufzeit</th>
+                        <th>Verbrauch</th>
                         <th>Raum</th>
                         <th>Foto</th>
                     </tr>
@@ -99,6 +101,8 @@
                             {% else %}{{ v.effizienzklasse }}{% endif %}
                         </td>
                         <td>{{ v.schutzart }}</td>
+                        <td>{% if v.laufzeit_h %}{{ v.laufzeit_h }} h{% else %}–{% endif %}</td>
+                        <td>{% if v.verbrauch_kwh %}{{ v.verbrauch_kwh }} kWh{% else %}–{% endif %}</td>
                         <td>{{ v.raum }}</td>
                         <td>
                             {% for f in v.fotos %}
@@ -109,7 +113,7 @@
                     {% if v.notizen %}
                     <tr class="notes-row">
                         <td></td>
-                        <td colspan="10" class="notes">📝 {{ v.notizen[:200] }}</td>
+                        <td colspan="12" class="notes">📝 {{ v.notizen[:200] }}</td>
                     </tr>
                     {% endif %}
                     {% endfor %}

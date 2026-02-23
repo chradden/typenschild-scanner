@@ -97,11 +97,18 @@ async def dashboard(request: Request, auth=Depends(auth_pruefen)):
                 .count()
             )
 
-            gesamt_kw = (
+            # Gesamtleistung: kW + W/1000 berücksichtigen
+            sum_kw = (
                 session.query(func.sum(Verbraucher.leistung_kw))
                 .filter_by(standort_id=s.id)
                 .scalar()
             ) or 0
+            sum_w = (
+                session.query(func.sum(Verbraucher.leistung_w))
+                .filter_by(standort_id=s.id)
+                .scalar()
+            ) or 0
+            gesamt_kw = sum_kw + sum_w / 1000
 
             anzahl_berichte = session.query(Bericht).filter_by(standort_id=s.id).count()
 
@@ -200,6 +207,8 @@ async def standort_detail(
                 "notizen": v.notizen or "",
                 "fotos": fotos,
                 "ki_vertrauen": v.ki_vertrauen or 0,
+                "laufzeit_h": v.laufzeit_h,
+                "verbrauch_kwh": round(kw * v.laufzeit_h, 2) if v.laufzeit_h and kw else None,
             })
 
         # Filter-Optionen
@@ -335,11 +344,17 @@ async def api_stats(standort_id: int, auth=Depends(auth_pruefen)):
     """JSON-API: Statistiken für einen Standort."""
     with get_session() as session:
         gesamt = session.query(Verbraucher).filter_by(standort_id=standort_id).count()
-        gesamt_kw = (
+        sum_kw = (
             session.query(func.sum(Verbraucher.leistung_kw))
             .filter_by(standort_id=standort_id)
             .scalar()
         ) or 0
+        sum_w = (
+            session.query(func.sum(Verbraucher.leistung_w))
+            .filter_by(standort_id=standort_id)
+            .scalar()
+        ) or 0
+        gesamt_kw = sum_kw + sum_w / 1000
 
         fotos = (
             session.query(TypschildFoto).join(Verbraucher)

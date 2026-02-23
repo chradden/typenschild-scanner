@@ -63,6 +63,8 @@ async def export_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "Betriebsart": v.betriebsart or "",
                 "Raum": v.raum or "",
                 "Bezeichnung": v.bezeichnung or "",
+                "Laufzeit_h": v.laufzeit_h or "",
+                "Verbrauch_kWh": round((v.leistung_kw or (v.leistung_w / 1000 if v.leistung_w else 0)) * v.laufzeit_h, 2) if v.laufzeit_h else "",
                 "Notizen": v.notizen or "",
                 "Erfasst_am": v.erstellt_am.strftime("%d.%m.%Y %H:%M") if v.erstellt_am else "",
             })

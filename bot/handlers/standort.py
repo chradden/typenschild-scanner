@@ -115,13 +115,19 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
             .count()
         )
 
-        # Gesamtleistung berechnen
+        # Gesamtleistung berechnen (kW + W/1000)
         from sqlalchemy import func
-        gesamt_kw = (
+        sum_kw = (
             session.query(func.sum(Verbraucher.leistung_kw))
             .filter_by(standort_id=standort.id)
             .scalar()
         ) or 0
+        sum_w = (
+            session.query(func.sum(Verbraucher.leistung_w))
+            .filter_by(standort_id=standort.id)
+            .scalar()
+        ) or 0
+        gesamt_kw = sum_kw + sum_w / 1000
 
         # Nach Gerätetyp gruppieren
         typen = (

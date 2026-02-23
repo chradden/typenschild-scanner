@@ -153,6 +153,7 @@ def _formatiere_scan_ergebnis(ki: dict, vid: int) -> str:
     if ki.get("schutzart"):
         text += f"🛡️ Schutzart: {ki['schutzart']}\n"
 
+    text += "\n💡 Laufzeit angeben: `Laufzeit: 8` (Stunden/Tag)"
     text += "\n💡 Notiz hinzufügen: Einfach Text oder Sprache senden"
 
     return text
@@ -188,12 +189,19 @@ async def text_notiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             verbraucher.notizen = text
 
-        # Prüfen ob Raum/Bezeichnung angegeben
+        # Prüfen ob Raum/Bezeichnung/Laufzeit angegeben
         text_lower = text.lower()
         if text_lower.startswith("raum:") or text_lower.startswith("raum "):
             verbraucher.raum = text.split(":", 1)[-1].strip() if ":" in text else text[5:].strip()
         elif text_lower.startswith("name:") or text_lower.startswith("bezeichnung:"):
             verbraucher.bezeichnung = text.split(":", 1)[-1].strip()
+        elif text_lower.startswith("laufzeit:") or text_lower.startswith("laufzeit "):
+            try:
+                wert = text.split(":", 1)[-1].strip() if ":" in text else text[9:].strip()
+                wert = wert.replace(",", ".").replace("h", "").replace("std", "").strip()
+                verbraucher.laufzeit_h = float(wert)
+            except ValueError:
+                pass
 
     await update.message.reply_text(
         f"📝 Notiz zu Verbraucher #{letzter_id} hinzugefügt.\n"
@@ -247,7 +255,7 @@ async def sprach_notiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         f"🎤 Notiz transkribiert und zu #{letzter_id} hinzugefügt:\n"
-        f"„{transkript[:150]}{'...' if len(transkript) > 150 else ''}""
+        f"\u201e{transkript[:150]}{'...' if len(transkript) > 150 else ''}\u201c"
     )
 
 

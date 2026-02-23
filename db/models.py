@@ -76,6 +76,9 @@ class Verbraucher(Base):
     isolationsklasse = Column(String)              # F, H, B...
     betriebsart = Column(String)                   # S1, S2, S3...
 
+    # ── Betrieb ──
+    laufzeit_h = Column(Float)                     # Tägliche Laufzeit in Stunden
+
     # ── Zusätzliche Infos ──
     raum = Column(String)                          # "Heizungsraum", "Technikzentrale"
     bezeichnung = Column(String)                   # Eigene Bezeichnung, z.B. "Zuluft-Ventilator AHU3"
