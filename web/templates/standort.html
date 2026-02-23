@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ standort.name }} – Typenschild-Scanner</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="/" class="back-link">← Alle Standorte</a>
+            <h1>📍 {{ standort.name }}</h1>
+            <p class="subtitle">{{ standort.adresse }} {% if standort.gebaeude != '–' %}| {{ standort.gebaeude }}{% endif %}</p>
+        </header>
+
+        <!-- Statistik-Leiste -->
+        <div class="stats-bar">
+            <div class="stat-box">
+                <span class="stat-big">{{ verbraucher|length }}</span>
+                <span>Verbraucher</span>
+            </div>
+            <div class="stat-box">
+                <span class="stat-big">{{ "%.1f"|format(gesamt_kw) }} kW</span>
+                <span>Gesamtleistung</span>
+            </div>
+            <div class="stat-box">
+                <a href="/export/{{ standort.id }}/csv" class="btn btn-small">📊 CSV-Export</a>
+            </div>
+        </div>
+
+        <!-- Filter -->
+        <form method="get" class="filter-bar">
+            <select name="typ">
+                <option value="">Alle Typen</option>
+                {% for t in verfuegbare_typen %}
+                <option value="{{ t }}" {% if filter_typ == t %}selected{% endif %}>{{ t }}</option>
+                {% endfor %}
+            </select>
+            <select name="hersteller">
+                <option value="">Alle Hersteller</option>
+                {% for h in verfuegbare_hersteller %}
+                <option value="{{ h }}" {% if filter_hersteller == h %}selected{% endif %}>{{ h }}</option>
+                {% endfor %}
+            </select>
+            <select name="effizienz">
+                <option value="">Alle Effizienzklassen</option>
+                <option value="IE1" {% if filter_effizienz == 'IE1' %}selected{% endif %}>IE1</option>
+                <option value="IE2" {% if filter_effizienz == 'IE2' %}selected{% endif %}>IE2</option>
+                <option value="IE3" {% if filter_effizienz == 'IE3' %}selected{% endif %}>IE3</option>
+                <option value="IE4" {% if filter_effizienz == 'IE4' %}selected{% endif %}>IE4</option>
+            </select>
+            <button type="submit" class="btn">🔍 Filtern</button>
+            <a href="/standort/{{ standort.id }}" class="btn btn-secondary">✖ Reset</a>
+        </form>
+
+        <!-- Verbraucher-Liste -->
+        {% if not verbraucher %}
+        <div class="empty-state">
+            <p>Keine Verbraucher gefunden. Sende im Bot ein Foto eines Typenschilds.</p>
+        </div>
+        {% else %}
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Typ</th>
+                        <th>Hersteller</th>
+                        <th>Modell</th>
+                        <th>Leistung</th>
+                        <th>Spannung</th>
+                        <th>Strom</th>
+                        <th>Effizienz</th>
+                        <th>Schutzart</th>
+                        <th>Raum</th>
+                        <th>Foto</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in verbraucher %}
+                    <tr>
+                        <td>{{ v.id }}</td>
+                        <td><strong>{{ v.geraetetyp }}</strong></td>
+                        <td>{{ v.hersteller }}</td>
+                        <td>{{ v.modell }}</td>
+                        <td>
+                            {% if v.leistung_kw %}{{ v.leistung_kw }} kW
+                            {% elif v.leistung_w %}{{ v.leistung_w }} W
+                            {% else %}–{% endif %}
+                        </td>
+                        <td>{{ v.spannung_v }}</td>
+                        <td>{{ v.strom_a }}</td>
+                        <td>
+                            {% if v.effizienzklasse == 'IE1' %}<span class="badge badge-red">IE1</span>
+                            {% elif v.effizienzklasse == 'IE2' %}<span class="badge badge-yellow">IE2</span>
+                            {% elif v.effizienzklasse == 'IE3' %}<span class="badge badge-green">IE3</span>
+                            {% elif v.effizienzklasse == 'IE4' %}<span class="badge badge-blue">IE4</span>
+                            {% else %}{{ v.effizienzklasse }}{% endif %}
+                        </td>
+                        <td>{{ v.schutzart }}</td>
+                        <td>{{ v.raum }}</td>
+                        <td>
+                            {% for f in v.fotos %}
+                            <a href="/foto/{{ f.id }}" target="_blank">📷</a>
+                            {% endfor %}
+                        </td>
+                    </tr>
+                    {% if v.notizen %}
+                    <tr class="notes-row">
+                        <td></td>
+                        <td colspan="10" class="notes">📝 {{ v.notizen[:200] }}</td>
+                    </tr>
+                    {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Berichte -->
+        {% if berichte %}
+        <h2>📄 Generierte Reports</h2>
+        <div class="berichte-list">
+            {% for b in berichte %}
+            <div class="bericht-item">
+                <span>{{ b.titel }} ({{ b.anzahl }} Geräte) – {{ b.erstellt_am }}</span>
+                {% if b.hat_pdf %}
+                <a href="/bericht/{{ b.id }}/download" class="btn btn-small">⬇️ PDF</a>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

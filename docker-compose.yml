@@ -1,0 +1,15 @@
+services:
+  app:
+    build: .
+    container_name: typenschild-scanner
+    restart: unless-stopped
+    ports:
+      - "8091:8090"
+    volumes:
+      - ./data:/app/data
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:///data/typenschild.db
+      - PDF_OUTPUT_DIR=./data/output
+      - UPLOAD_DIR=./data/uploads

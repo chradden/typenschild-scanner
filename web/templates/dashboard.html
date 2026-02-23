@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ titel }} – Dashboard</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ {{ titel }}</h1>
+            <p class="subtitle">Typenschild-Erfassung & Verbraucher-Dokumentation</p>
+        </header>
+
+        {% if not standorte %}
+        <div class="empty-state">
+            <h2>Noch keine Standorte vorhanden</h2>
+            <p>Erstelle im Telegram-Bot einen Standort mit <code>/standort &lt;Name&gt;</code></p>
+        </div>
+        {% endif %}
+
+        <div class="grid">
+            {% for s in standorte %}
+            <a href="/standort/{{ s.id }}" class="card">
+                <div class="card-header">
+                    <h2>📍 {{ s.name }}</h2>
+                    <span class="badge">{{ s.anzahl_verbraucher }} Geräte</span>
+                </div>
+                <div class="card-body">
+                    <p class="address">{{ s.adresse }}</p>
+                    <div class="stats">
+                        <div class="stat">
+                            <span class="stat-value">⚡ {{ "%.1f"|format(s.gesamt_kw) }} kW</span>
+                            <span class="stat-label">Gesamtleistung</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">📷 {{ s.anzahl_fotos }}</span>
+                            <span class="stat-label">Fotos</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">📄 {{ s.anzahl_berichte }}</span>
+                            <span class="stat-label">Reports</span>
+                        </div>
+                    </div>
+
+                    {% if s.letzte_verbraucher %}
+                    <div class="recent">
+                        <small>Zuletzt erfasst:</small>
+                        {% for v in s.letzte_verbraucher %}
+                        <div class="recent-item">
+                            {{ v.geraetetyp }} {% if v.hersteller != '–' %}({{ v.hersteller }}){% endif %}
+                            {% if v.leistung_kw %} – {{ v.leistung_kw }} kW{% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
