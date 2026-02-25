@@ -204,8 +204,6 @@ async def standort_detail(
                 "frequenz_hz": v.frequenz_hz,
                 "drehzahl_rpm": v.drehzahl_rpm,
                 "effizienzklasse": v.effizienzklasse or "–",
-                "schutzart": v.schutzart or "–",
-                "raum": v.raum or "–",
                 "bezeichnung": v.bezeichnung or "–",
                 "notizen": v.notizen or "",
                 "fotos": fotos,
@@ -330,9 +328,9 @@ async def bericht_generieren(standort_id: int, auth=Depends(auth_pruefen)):
                 "frequenz_hz": v.frequenz_hz,
                 "drehzahl_rpm": v.drehzahl_rpm,
                 "effizienzklasse": v.effizienzklasse or "\u2013",
-                "schutzart": v.schutzart or "\u2013",
-                "raum": v.raum or "\u2013",
                 "bezeichnung": v.bezeichnung or "\u2013",
+                "laufzeit_h": v.laufzeit_h,
+                "verbrauch_kwh": round(kw * v.laufzeit_h, 2) if v.laufzeit_h and kw else None,
                 "fotos": [f.dateipfad for f in v.fotos],
             })
 
@@ -395,9 +393,9 @@ async def export_csv(standort_id: int, auth=Depends(auth_pruefen)):
                 "Spannung_V": v.spannung_v or "",
                 "Strom_A": v.strom_a or "",
                 "Effizienzklasse": v.effizienzklasse or "",
-                "Schutzart": v.schutzart or "",
-                "Raum": v.raum or "",
                 "Bezeichnung": v.bezeichnung or "",
+                "Laufzeit_h": v.laufzeit_h or "",
+                "Verbrauch_kWh": round((v.leistung_kw or (v.leistung_w / 1000 if v.leistung_w else 0)) * v.laufzeit_h, 2) if v.laufzeit_h else "",
             })
 
     output = io.StringIO()

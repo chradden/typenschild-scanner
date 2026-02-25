@@ -50,6 +50,9 @@ Regeln:
 - geraetetyp: Bestimme den passendsten Typ anhand von Hersteller, Modell und Kontext.
   Beispiele: PHILIPS TV → "TV", Mikrowelle → "Mikrowelle", Kopierer/MFP → "Kopierer",
   Siemens 1LE... → "Motor", Grundfos → "Pumpe". Nutze "Sonstiges" nur wenn kein Typ passt.
+- effizienzklasse: Suche aktiv nach IE1/IE2/IE3/IE4-Kennzeichnung auf dem Typenschild.
+  Oft als Logo, Symbol oder Text vorhanden. Bei Motoren ab 2011 ist IE-Klasse i.d.R. Pflicht.
+  Auch EFF1=IE3, EFF2=IE2 beachten. Nur null wenn wirklich nichts erkennbar.
 - Erfinde KEINE Daten – lieber null als falsch"""
 
 
