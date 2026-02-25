@@ -38,3 +38,21 @@ def laufzeit_keyboard(verbraucher_id: int):
         ],
     ]
     return InlineKeyboardMarkup(buttons)
+
+
+def leistung_vorschlag_keyboard(verbraucher_id: int, watt: float = None, kw: float = None):
+    """Erstellt Inline-Buttons für KI-Leistungsvorschlag."""
+    if kw:
+        label = f"✅ {kw} kW übernehmen"
+        data = f"pw_kw_{kw}_{verbraucher_id}"
+    elif watt:
+        label = f"✅ {watt} W übernehmen"
+        data = f"pw_w_{watt}_{verbraucher_id}"
+    else:
+        return None
+
+    buttons = [
+        [InlineKeyboardButton(label, callback_data=data)],
+        [InlineKeyboardButton("✍️ Selbst eingeben", callback_data=f"pw_custom_{verbraucher_id}")],
+    ]
+    return InlineKeyboardMarkup(buttons)

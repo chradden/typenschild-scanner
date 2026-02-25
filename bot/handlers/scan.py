@@ -9,8 +9,8 @@ from telegram.ext import ContextTypes, CallbackQueryHandler
 import config
 from db.database import get_session
 from db.models import Benutzer, Verbraucher, TypschildFoto
-from core.ki import analysiere_typenschild, transkribiere_audio
-from bot.keyboards import laufzeit_keyboard
+from core.ki import analysiere_typenschild, transkribiere_audio, schaetze_leistung
+from bot.keyboards import laufzeit_keyboard, leistung_vorschlag_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -130,6 +130,34 @@ async def foto_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Antwort formatieren
     antwort = _formatiere_scan_ergebnis(ki_result, verbraucher_id)
     await update.message.reply_text(antwort, parse_mode="Markdown")
+
+    # Wenn Leistung fehlt: KI-Vorschlag per Hersteller/Modell
+    if not ki_result.get("leistung_kw") and not ki_result.get("leistung_w"):
+        vorschlag = schaetze_leistung(
+            hersteller=ki_result.get("hersteller"),
+            modell=ki_result.get("modell"),
+            geraetetyp=ki_result.get("geraetetyp"),
+            spannung=ki_result.get("spannung_v"),
+            strom=ki_result.get("strom_a"),
+        )
+        if vorschlag:
+            sicherheit_icon = {
+                "hoch": "🟢", "mittel": "🟡", "niedrig": "🔴"
+            }.get(vorschlag.get("sicherheit", "niedrig"), "🟡")
+
+            kw_val = vorschlag.get("leistung_kw")
+            w_val = vorschlag.get("leistung_w")
+            wert_text = f"{kw_val} kW" if kw_val else f"{w_val} W"
+
+            kb = leistung_vorschlag_keyboard(verbraucher_id, watt=w_val, kw=kw_val)
+            if kb:
+                await update.message.reply_text(
+                    f"🤖 **KI-Leistungsvorschlag:** {wert_text}\n"
+                    f"{sicherheit_icon} Sicherheit: {vorschlag.get('sicherheit', '?')}\n"
+                    f"📝 {vorschlag.get('quelle', '')}",
+                    parse_mode="Markdown",
+                    reply_markup=kb,
+                )
 
     # Laufzeit-Abfrage per Inline-Buttons
     await update.message.reply_text(
@@ -423,6 +451,43 @@ async def laufzeit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text(f"✅ Laufzeit für #{vid}: {label}")
 
 
+async def leistung_vorschlag_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Callback für KI-Leistungsvorschlag übernehmen/ablehnen."""
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data  # z.B. "pw_w_60.0_9" oder "pw_kw_2.2_9" oder "pw_custom_9"
+    parts = data.split("_")
+    # parts: ["pw", einheit, wert, vid] oder ["pw", "custom", vid]
+
+    if parts[1] == "custom":
+        vid = int(parts[2])
+        context.user_data["letzter_verbraucher_id"] = vid
+        await query.edit_message_text(
+            "✍️ Leistung manuell eingeben:\n"
+            "Beispiel: `Leistung: 60W` oder `Leistung: 2.2kW`",
+            parse_mode="Markdown",
+        )
+        return
+
+    einheit = parts[1]  # "w" oder "kw"
+    wert = float(parts[2])
+    vid = int(parts[3])
+
+    with get_session() as session:
+        verbraucher = session.get(Verbraucher, vid)
+        if verbraucher:
+            if einheit == "kw":
+                verbraucher.leistung_kw = wert
+                verbraucher.leistung_w = None
+            else:
+                verbraucher.leistung_w = wert
+                verbraucher.leistung_kw = None
+
+    einheit_label = "kW" if einheit == "kw" else "W"
+    await query.edit_message_text(f"✅ Leistung für #{vid}: {wert} {einheit_label} (KI-Vorschlag übernommen)")
+
+
 def get_bestaetigung_callback_handler():
     """Erstellt den CallbackQueryHandler für Bestätigungen."""
     return CallbackQueryHandler(bestaetigung_callback, pattern=r"^(ok|edit|del)_\d+$")
@@ -431,3 +496,8 @@ def get_bestaetigung_callback_handler():
 def get_laufzeit_callback_handler():
     """Erstellt den CallbackQueryHandler für Laufzeit-Auswahl."""
     return CallbackQueryHandler(laufzeit_callback, pattern=r"^lz_")
+
+
+def get_leistung_vorschlag_callback_handler():
+    """Erstellt den CallbackQueryHandler für Leistungsvorschläge."""
+    return CallbackQueryHandler(leistung_vorschlag_callback, pattern=r"^pw_")

@@ -125,6 +125,58 @@ def _leeres_ergebnis(fehler: str = "") -> dict:
 
 # ─── Sprachnachricht transkribieren ──────────────────────────────────────
 
+def schaetze_leistung(hersteller: str, modell: str, geraetetyp: str,
+                     spannung: str = None, strom: str = None) -> dict | None:
+    """Schätzt die Leistung eines Geräts anhand von Hersteller, Modell und Typ.
+    
+    Returns:
+        Dict mit 'leistung_w', 'leistung_kw', 'quelle', 'sicherheit' oder None.
+    """
+    geraet_info = f"Hersteller: {hersteller or '?'}, Modell: {modell or '?'}, Gerätetyp: {geraetetyp or '?'}"
+    if spannung:
+        geraet_info += f", Spannung: {spannung}"
+    if strom:
+        geraet_info += f", Strom: {strom}"
+
+    prompt = f"""Du bist ein Elektrotechnik-Experte mit umfassendem Wissen über elektrische Geräte.
+
+Folgendes Gerät wurde gescannt, aber die Leistungsaufnahme konnte nicht vom Typenschild gelesen werden:
+{geraet_info}
+
+Aufgabe: Recherchiere in deinem Wissen die typische Leistungsaufnahme dieses Geräts.
+
+Antworte NUR mit validem JSON:
+{{
+    "leistung_w": null oder Zahl in Watt,
+    "leistung_kw": null oder Zahl in kW,
+    "quelle": "Kurze Begründung, woher der Wert stammt (z.B. 'Typische Leistung Samsung 34\" Curved Monitor')",
+    "sicherheit": "hoch|mittel|niedrig"
+}}
+
+Regeln:
+- Nutze dein Wissen über das spezifische Modell wenn möglich
+- Sonst typische Werte für diese Gerätekategorie
+- Gib leistung_w ODER leistung_kw an (nicht beides)
+- Für Geräte <1000W: leistung_w verwenden, sonst leistung_kw
+- Bei völlig unbekanntem Gerät: null für Leistung, sicherheit: "niedrig"
+- Kurze, prägnante Quelle auf Deutsch"""
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=200,
+            temperature=0.1,
+        )
+        result = json.loads(response.choices[0].message.content)
+        if result.get("leistung_w") or result.get("leistung_kw"):
+            return result
+        return None
+    except Exception as e:
+        logger.error(f"Leistungsschätzung fehlgeschlagen: {e}")
+        return None
+
+
 def transkribiere_audio(dateipfad: str) -> str:
     """Transkribiert eine Audiodatei per Whisper."""
     try:
