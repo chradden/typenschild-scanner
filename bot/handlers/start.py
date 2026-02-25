@@ -103,7 +103,10 @@ async def name_eingabe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Dein Account wurde erstellt.\n"
         f"Lege jetzt deinen ersten Standort an mit:\n"
         f"/standort <Name>\n\n"
-        f"Beispiel: /standort Bürogebäude Schönhauser Allee 45"
+        f"Beispiel: /standort Bürogebäude Schönhauser Allee 45\n\n"
+        f"🎯 **Tipp:** Teile deinen Standort (Büroklammer → Standort), "
+        f"um die Adresse automatisch zu hinterlegen!",
+        parse_mode="Markdown",
     )
     return ConversationHandler.END
 
