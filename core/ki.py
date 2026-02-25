@@ -45,6 +45,10 @@ Regeln:
 - Bei unleserlichen Feldern: null setzen
 - Spannung und Strom als Text, da oft Stern/Dreieck-Angaben (z.B. "230/400")
 - Leistung: Wenn nur W angegeben, in leistung_w eintragen. Wenn kW, in leistung_kw
+- Wenn KEINE explizite Leistungsangabe auf dem Schild steht, aber Spannung, Strom und cos_phi
+  ablesbar sind, BERECHNE die Leistung: P = U × I × cos_phi (1-phasig) bzw.
+  P = U × I × √3 × cos_phi (3-phasig). Ergebnis in leistung_w eintragen.
+  Bei Angaben wie "230/400V" und "11.2/6.5A" den höheren Wert (400V, 6.5A, 3-phasig) nehmen.
 - vertrauen: Wie sicher bist du bei der Gesamterkennung? (0.0 = unsicher, 1.0 = perfekt lesbar)
 - lesbarkeit: Gesamtqualität des Typenschilds
 - geraetetyp: Bestimme den passendsten Typ anhand von Hersteller, Modell und Kontext.

@@ -98,6 +98,35 @@ async def foto_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         verbraucher_id = verbraucher.id
 
+    # Fallback: Leistung aus Spannung × Strom × cos_phi berechnen
+    if not ki_result.get("leistung_kw") and not ki_result.get("leistung_w"):
+        try:
+            spannung = ki_result.get("spannung_v", "") or ""
+            strom = ki_result.get("strom_a", "") or ""
+            cos_phi = ki_result.get("cos_phi")
+            phasen = ki_result.get("phasen", 1) or 1
+
+            # Bei Stern/Dreieck "230/400" → höheren Wert nehmen
+            u = max(float(x) for x in spannung.replace(",", ".").split("/") if x.strip()) if spannung else None
+            # Bei Strom "11.2/6.5" → zum höheren Spannungswert gehört der kleinere Strom
+            strom_vals = [float(x) for x in strom.replace(",", ".").split("/") if x.strip()] if strom else []
+            i = min(strom_vals) if len(strom_vals) > 1 else (strom_vals[0] if strom_vals else None)
+
+            if u and i:
+                phi = cos_phi if cos_phi else 0.85  # Annahme cos_phi=0.85 wenn unbekannt
+                if phasen == 3:
+                    p_w = u * i * 1.732 * phi
+                else:
+                    p_w = u * i * phi
+                with get_session() as session:
+                    v = session.get(Verbraucher, verbraucher_id)
+                    if v:
+                        v.leistung_w = round(p_w, 1)
+                ki_result["leistung_w"] = round(p_w, 1)
+                ki_result["_leistung_berechnet"] = True
+        except (ValueError, TypeError):
+            pass
+
     # Antwort formatieren
     antwort = _formatiere_scan_ergebnis(ki_result, verbraucher_id)
     await update.message.reply_text(antwort, parse_mode="Markdown")
@@ -140,9 +169,17 @@ def _formatiere_scan_ergebnis(ki: dict, vid: int) -> str:
     # Elektrische Daten
     text += "\n"
     if ki.get("leistung_kw"):
-        text += f"⚡ Leistung: {ki['leistung_kw']} kW\n"
+        text += f"⚡ Leistung: {ki['leistung_kw']} kW"
+        if ki.get("_leistung_berechnet"):
+            text += " _(berechnet)_"
+        text += "\n"
     elif ki.get("leistung_w"):
-        text += f"⚡ Leistung: {ki['leistung_w']} W\n"
+        text += f"⚡ Leistung: {ki['leistung_w']} W"
+        if ki.get("_leistung_berechnet"):
+            text += " _(berechnet)_"
+        text += "\n"
+    else:
+        text += "⚠️ Leistung: _nicht erkannt_ → `Leistung: X` eingeben\n"
     if ki.get("spannung_v"):
         text += f"🔌 Spannung: {ki['spannung_v']} V\n"
     if ki.get("strom_a"):
@@ -160,6 +197,7 @@ def _formatiere_scan_ergebnis(ki: dict, vid: int) -> str:
     if ki.get("schutzart"):
         text += f"🛡️ Schutzart: {ki['schutzart']}\n"
 
+    text += "\n💡 Leistung nachtragen: `Leistung: 5.5` (kW) oder `Leistung: 750W`"
     text += "\n💡 Notiz hinzufügen: Einfach Text oder Sprache senden"
 
     return text
@@ -206,6 +244,25 @@ async def text_notiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 wert = text.split(":", 1)[-1].strip() if ":" in text else text[9:].strip()
                 wert = wert.replace(",", ".").replace("h", "").replace("std", "").strip()
                 verbraucher.laufzeit_h = float(wert)
+            except ValueError:
+                pass
+        elif text_lower.startswith("leistung:") or text_lower.startswith("leistung "):
+            try:
+                wert = text.split(":", 1)[-1].strip() if ":" in text else text[9:].strip()
+                wert_lower = wert.lower()
+                if "kw" in wert_lower:
+                    zahl = float(wert_lower.replace("kw", "").replace(",", ".").strip())
+                    verbraucher.leistung_kw = zahl
+                    verbraucher.leistung_w = None
+                elif "w" in wert_lower:
+                    zahl = float(wert_lower.replace("w", "").replace(",", ".").strip())
+                    verbraucher.leistung_w = zahl
+                    verbraucher.leistung_kw = None
+                else:
+                    # Ohne Einheit → als kW annehmen
+                    zahl = float(wert.replace(",", ".").strip())
+                    verbraucher.leistung_kw = zahl
+                    verbraucher.leistung_w = None
             except ValueError:
                 pass
 
