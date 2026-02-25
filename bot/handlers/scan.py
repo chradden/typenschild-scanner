@@ -227,23 +227,25 @@ async def text_notiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Verbraucher nicht mehr gefunden.")
             return
 
-        # Notiz anhängen
-        if verbraucher.notizen:
-            verbraucher.notizen += f"\n{text}"
-        else:
-            verbraucher.notizen = text
-
-        # Prüfen ob Raum/Bezeichnung/Laufzeit angegeben
+        # Prüfen ob strukturierte Eingabe (Leistung/Laufzeit/Raum/Name)
         text_lower = text.lower()
+        ist_strukturiert = False
+
         if text_lower.startswith("raum:") or text_lower.startswith("raum "):
             verbraucher.raum = text.split(":", 1)[-1].strip() if ":" in text else text[5:].strip()
+            ist_strukturiert = True
+            antwort = f"✅ Raum für #{letzter_id}: {verbraucher.raum}"
         elif text_lower.startswith("name:") or text_lower.startswith("bezeichnung:"):
             verbraucher.bezeichnung = text.split(":", 1)[-1].strip()
+            ist_strukturiert = True
+            antwort = f"✅ Bezeichnung für #{letzter_id}: {verbraucher.bezeichnung}"
         elif text_lower.startswith("laufzeit:") or text_lower.startswith("laufzeit "):
             try:
                 wert = text.split(":", 1)[-1].strip() if ":" in text else text[9:].strip()
                 wert = wert.replace(",", ".").replace("h", "").replace("std", "").strip()
                 verbraucher.laufzeit_h = float(wert)
+                ist_strukturiert = True
+                antwort = f"✅ Laufzeit für #{letzter_id}: {verbraucher.laufzeit_h}h/Tag"
             except ValueError:
                 pass
         elif text_lower.startswith("leistung:") or text_lower.startswith("leistung "):
@@ -254,17 +256,29 @@ async def text_notiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     zahl = float(wert_lower.replace("kw", "").replace(",", ".").strip())
                     verbraucher.leistung_kw = zahl
                     verbraucher.leistung_w = None
+                    ist_strukturiert = True
+                    antwort = f"✅ Leistung für #{letzter_id}: {zahl} kW"
                 elif "w" in wert_lower:
                     zahl = float(wert_lower.replace("w", "").replace(",", ".").strip())
                     verbraucher.leistung_w = zahl
                     verbraucher.leistung_kw = None
+                    ist_strukturiert = True
+                    antwort = f"✅ Leistung für #{letzter_id}: {zahl} W"
                 else:
-                    # Ohne Einheit → als kW annehmen
                     zahl = float(wert.replace(",", ".").strip())
                     verbraucher.leistung_kw = zahl
                     verbraucher.leistung_w = None
+                    ist_strukturiert = True
+                    antwort = f"✅ Leistung für #{letzter_id}: {zahl} kW"
             except ValueError:
                 pass
+
+        # Nur als Notiz speichern wenn KEINE strukturierte Eingabe
+        if not ist_strukturiert:
+            if verbraucher.notizen:
+                verbraucher.notizen += f"\n{text}"
+            else:
+                verbraucher.notizen = text
 
     # Freitext-Laufzeit-Eingabe?
     lz_vid = context.user_data.pop("laufzeit_eingabe_fuer", None)
@@ -281,10 +295,13 @@ async def text_notiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except ValueError:
             pass
 
-    await update.message.reply_text(
-        f"📝 Notiz zu Verbraucher #{letzter_id} hinzugefügt.\n"
-        f"Weiter scannen: Nächstes Foto senden"
-    )
+    if ist_strukturiert:
+        await update.message.reply_text(antwort)
+    else:
+        await update.message.reply_text(
+            f"📝 Notiz zu Verbraucher #{letzter_id} hinzugefügt.\n"
+            f"Weiter scannen: Nächstes Foto senden"
+        )
 
 
 async def sprach_notiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
