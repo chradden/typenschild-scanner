@@ -105,7 +105,11 @@ async def name_eingabe(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"/standort <Name>\n\n"
         f"Beispiel: /standort Bürogebäude Schönhauser Allee 45\n\n"
         f"🎯 **Tipp:** Teile deinen Standort (Büroklammer → Standort), "
-        f"um die Adresse automatisch zu hinterlegen!",
+        f"um die Adresse automatisch zu hinterlegen!\n\n"
+        f"📝 **Daten ergänzen** nach dem Scan:\n"
+        f"  `Raum: Heizungskeller`\n"
+        f"  `Leistung: 5.5` (kW) oder `Leistung: 750W`\n"
+        f"  `Laufzeit: 8` (h/Tag)",
         parse_mode="Markdown",
     )
     return ConversationHandler.END

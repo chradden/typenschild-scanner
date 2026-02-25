@@ -74,6 +74,7 @@
                         <th>Effizienz</th>
                         <th>Laufzeit</th>
                         <th>Verbrauch</th>
+                        <th>Raum</th>
                         <th>Foto</th>
                     </tr>
                 </thead>
@@ -100,6 +101,7 @@
                         </td>
                         <td>{% if v.laufzeit_h %}{{ v.laufzeit_h }} h{% else %}–{% endif %}</td>
                         <td>{% if v.verbrauch_kwh %}{{ v.verbrauch_kwh }} kWh{% else %}–{% endif %}</td>
+                        <td>{{ v.raum }}</td>
                         <td>
                             {% for f in v.fotos %}
                             <a href="/foto/{{ f.id }}" target="_blank">📷</a>
@@ -109,7 +111,7 @@
                     {% if v.notizen %}
                     <tr class="notes-row">
                         <td></td>
-                        <td colspan="10" class="notes">📝 {{ v.notizen[:200] }}</td>
+                        <td colspan="11" class="notes">📝 {{ v.notizen[:200] }}</td>
                     </tr>
                     {% endif %}
                     {% endfor %}

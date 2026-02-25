@@ -58,6 +58,7 @@ async def export_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "cos_phi": v.cos_phi or "",
                 "Drehzahl_rpm": v.drehzahl_rpm or "",
                 "Effizienzklasse": v.effizienzklasse or "",
+                "Raum": v.raum or "",
                 "Bezeichnung": v.bezeichnung or "",
                 "Laufzeit_h": v.laufzeit_h or "",
                 "Verbrauch_kWh": round((v.leistung_kw or (v.leistung_w / 1000 if v.leistung_w else 0)) * v.laufzeit_h, 2) if v.laufzeit_h else "",

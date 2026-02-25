@@ -78,6 +78,7 @@
             <th>Effizienz</th>
             <th>Laufzeit</th>
             <th>Verbrauch</th>
+            <th>Raum</th>
         </tr>
     </thead>
     <tbody>
@@ -102,6 +103,7 @@
             </td>
             <td>{% if v.laufzeit_h %}{{ v.laufzeit_h }} h{% else %}–{% endif %}</td>
             <td>{% if v.verbrauch_kwh %}{{ v.verbrauch_kwh }} kWh{% else %}–{% endif %}</td>
+            <td>{{ v.raum }}</td>
         </tr>
         {% endfor %}
     </tbody>

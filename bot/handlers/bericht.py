@@ -69,6 +69,7 @@ async def bericht_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "frequenz_hz": v.frequenz_hz,
                 "drehzahl_rpm": v.drehzahl_rpm,
                 "effizienzklasse": v.effizienzklasse or "–",
+                "raum": v.raum or "–",
                 "bezeichnung": v.bezeichnung or "–",
                 "laufzeit_h": v.laufzeit_h,
                 "verbrauch_kwh": round(kw * v.laufzeit_h, 2) if v.laufzeit_h and kw else None,
