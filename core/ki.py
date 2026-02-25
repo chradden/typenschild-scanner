@@ -22,7 +22,7 @@ Antworte NUR mit validem JSON (kein Markdown, kein ```):
     "modell": "Modellbezeichnung oder null",
     "seriennummer": "Seriennummer oder null",
     "baujahr": null oder Jahreszahl als Zahl,
-    "geraetetyp": "Motor|Pumpe|Lüfter|Kompressor|Heizung|Klimagerät|Transformator|Frequenzumrichter|Sonstiges",
+    "geraetetyp": "Motor|Pumpe|Lüfter|Kompressor|Heizung|Klimagerät|Transformator|Frequenzumrichter|Kühlschrank|Spülmaschine|Waschmaschine|Trockner|Mikrowelle|Backofen|Herd|Kaffeemaschine|TV|Monitor|Drucker|Kopierer|Server|USV|Beleuchtung|Aufzug|Förderband|Schweissgerät|Ladegerät|Sonstiges",
     "leistung_kw": null oder Zahl,
     "leistung_w": null oder Zahl,
     "spannung_v": "Spannungsangabe als Text oder null",
@@ -47,6 +47,9 @@ Regeln:
 - Leistung: Wenn nur W angegeben, in leistung_w eintragen. Wenn kW, in leistung_kw
 - vertrauen: Wie sicher bist du bei der Gesamterkennung? (0.0 = unsicher, 1.0 = perfekt lesbar)
 - lesbarkeit: Gesamtqualität des Typenschilds
+- geraetetyp: Bestimme den passendsten Typ anhand von Hersteller, Modell und Kontext.
+  Beispiele: PHILIPS TV → "TV", Mikrowelle → "Mikrowelle", Kopierer/MFP → "Kopierer",
+  Siemens 1LE... → "Motor", Grundfos → "Pumpe". Nutze "Sonstiges" nur wenn kein Typ passt.
 - Erfinde KEINE Daten – lieber null als falsch"""
 
 

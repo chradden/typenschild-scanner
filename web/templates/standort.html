@@ -123,8 +123,15 @@
         {% endif %}
 
         <!-- Berichte -->
+        <h2>📄 Reports</h2>
+        <div style="margin-bottom: 1rem;">
+            <form method="post" action="/standort/{{ standort.id }}/bericht" style="display:inline;">
+                <button type="submit" class="btn" {% if not verbraucher %}disabled title="Keine Verbraucher vorhanden"{% endif %}>
+                    📄 Bericht generieren
+                </button>
+            </form>
+        </div>
         {% if berichte %}
-        <h2>📄 Generierte Reports</h2>
         <div class="berichte-list">
             {% for b in berichte %}
             <div class="bericht-item">

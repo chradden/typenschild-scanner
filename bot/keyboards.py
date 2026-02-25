@@ -23,3 +23,18 @@ def bestaetigung_keyboard(verbraucher_id: int):
         ],
     ]
     return InlineKeyboardMarkup(buttons)
+
+
+def laufzeit_keyboard(verbraucher_id: int):
+    """Erstellt Inline-Buttons zur Laufzeit-Auswahl nach Scan."""
+    buttons = [
+        [
+            InlineKeyboardButton("⏱ 1h/Werktag", callback_data=f"lz_1_{verbraucher_id}"),
+            InlineKeyboardButton("⏰ 8h/Werktag", callback_data=f"lz_8_{verbraucher_id}"),
+        ],
+        [
+            InlineKeyboardButton("🔄 24/7", callback_data=f"lz_24_{verbraucher_id}"),
+            InlineKeyboardButton("✍️ Freitext", callback_data=f"lz_custom_{verbraucher_id}"),
+        ],
+    ]
+    return InlineKeyboardMarkup(buttons)

@@ -16,6 +16,9 @@ import config
 from db.database import get_session
 from db.models import Standort, Benutzer, Verbraucher, TypschildFoto, Bericht
 
+from core.pdf import generiere_pdf
+from core.ki import generiere_report_text
+
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Typenschild-Scanner Dashboard")
@@ -287,6 +290,80 @@ async def bericht_download(bericht_id: int, auth=Depends(auth_pruefen)):
         media_type="application/pdf",
         filename=os.path.basename(pdf_pfad),
     )
+
+
+@app.post("/standort/{standort_id}/bericht")
+async def bericht_generieren(standort_id: int, auth=Depends(auth_pruefen)):
+    """Generiert einen PDF-Bericht für den Standort und leitet zurück."""
+    with get_session() as session:
+        standort = session.get(Standort, standort_id)
+        if not standort:
+            return HTMLResponse("<h1>Standort nicht gefunden</h1>", status_code=404)
+        standort_name = standort.name
+
+        verbraucher_liste = (
+            session.query(Verbraucher)
+            .filter_by(standort_id=standort_id)
+            .order_by(Verbraucher.geraetetyp, Verbraucher.hersteller)
+            .all()
+        )
+
+        if not verbraucher_liste:
+            return RedirectResponse(f"/standort/{standort_id}", status_code=303)
+
+        verbraucher_daten = []
+        gesamt_kw = 0.0
+        for v in verbraucher_liste:
+            kw = v.leistung_kw or (v.leistung_w / 1000 if v.leistung_w else 0)
+            gesamt_kw += kw
+            verbraucher_daten.append({
+                "id": v.id,
+                "hersteller": v.hersteller or "\u2013",
+                "modell": v.modell or "\u2013",
+                "seriennummer": v.seriennummer or "\u2013",
+                "baujahr": v.baujahr,
+                "geraetetyp": v.geraetetyp or "Sonstiges",
+                "leistung_kw": v.leistung_kw,
+                "leistung_w": v.leistung_w,
+                "spannung_v": v.spannung_v or "\u2013",
+                "strom_a": v.strom_a or "\u2013",
+                "frequenz_hz": v.frequenz_hz,
+                "drehzahl_rpm": v.drehzahl_rpm,
+                "effizienzklasse": v.effizienzklasse or "\u2013",
+                "schutzart": v.schutzart or "\u2013",
+                "raum": v.raum or "\u2013",
+                "bezeichnung": v.bezeichnung or "\u2013",
+                "fotos": [f.dateipfad for f in v.fotos],
+            })
+
+    # KI-Report generieren
+    ki_report = generiere_report_text(verbraucher_daten)
+
+    # PDF generieren
+    try:
+        pdf_pfad = generiere_pdf(
+            standort_name=standort_name,
+            techniker_name="Dashboard",
+            verbraucher_daten=verbraucher_daten,
+            ki_report=ki_report,
+            gesamt_kw=gesamt_kw,
+        )
+    except Exception as e:
+        logger.error(f"PDF-Erstellung fehlgeschlagen: {e}")
+        return HTMLResponse(f"<h1>Fehler bei Berichterstellung: {e}</h1>", status_code=500)
+
+    # Bericht in DB speichern
+    with get_session() as session:
+        bericht = Bericht(
+            standort_id=standort_id,
+            titel=f"Verbraucher-Report {standort_name}",
+            pdf_pfad=pdf_pfad,
+            anzahl_verbraucher=len(verbraucher_daten),
+            gesamt_leistung_kw=gesamt_kw,
+        )
+        session.add(bericht)
+
+    return RedirectResponse(f"/standort/{standort_id}", status_code=303)
 
 
 @app.get("/export/{standort_id}/csv")

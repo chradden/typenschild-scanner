@@ -10,6 +10,7 @@ import config
 from db.database import get_session
 from db.models import Benutzer, Verbraucher, TypschildFoto
 from core.ki import analysiere_typenschild, transkribiere_audio
+from bot.keyboards import laufzeit_keyboard
 
 logger = logging.getLogger(__name__)
 
@@ -101,6 +102,12 @@ async def foto_scan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     antwort = _formatiere_scan_ergebnis(ki_result, verbraucher_id)
     await update.message.reply_text(antwort, parse_mode="Markdown")
 
+    # Laufzeit-Abfrage per Inline-Buttons
+    await update.message.reply_text(
+        f"⏱ Wie lange läuft dieses Gerät täglich?",
+        reply_markup=laufzeit_keyboard(verbraucher_id),
+    )
+
     # Letzten Verbraucher merken für Notizen
     context.user_data["letzter_verbraucher_id"] = verbraucher_id
 
@@ -153,7 +160,6 @@ def _formatiere_scan_ergebnis(ki: dict, vid: int) -> str:
     if ki.get("schutzart"):
         text += f"🛡️ Schutzart: {ki['schutzart']}\n"
 
-    text += "\n💡 Laufzeit angeben: `Laufzeit: 8` (Stunden/Tag)"
     text += "\n💡 Notiz hinzufügen: Einfach Text oder Sprache senden"
 
     return text
@@ -202,6 +208,21 @@ async def text_notiz(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 verbraucher.laufzeit_h = float(wert)
             except ValueError:
                 pass
+
+    # Freitext-Laufzeit-Eingabe?
+    lz_vid = context.user_data.pop("laufzeit_eingabe_fuer", None)
+    if lz_vid:
+        try:
+            wert = text.replace(",", ".").replace("h", "").replace("std", "").strip()
+            stunden = float(wert)
+            with get_session() as session:
+                v = session.get(Verbraucher, lz_vid)
+                if v:
+                    v.laufzeit_h = stunden
+            await update.message.reply_text(f"✅ Laufzeit für #{lz_vid}: {stunden}h/Tag")
+            return
+        except ValueError:
+            pass
 
     await update.message.reply_text(
         f"📝 Notiz zu Verbraucher #{letzter_id} hinzugefügt.\n"
@@ -298,6 +319,41 @@ async def bestaetigung_callback(update: Update, context: ContextTypes.DEFAULT_TY
         )
 
 
+async def laufzeit_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Callback für Laufzeit-Auswahl nach Typenschild-Scan."""
+    query = update.callback_query
+    await query.answer()
+
+    data = query.data  # z.B. "lz_8_42" oder "lz_custom_42"
+    parts = data.split("_")
+    # parts: ["lz", stunden_oder_custom, verbraucher_id]
+    wert = parts[1]
+    vid = int(parts[2])
+
+    if wert == "custom":
+        context.user_data["laufzeit_eingabe_fuer"] = vid
+        await query.edit_message_text(
+            "✍️ Bitte Laufzeit in Stunden/Tag als Text eingeben:\n"
+            "Beispiel: `4.5` oder `12`",
+            parse_mode="Markdown",
+        )
+        return
+
+    stunden = float(wert)
+    with get_session() as session:
+        verbraucher = session.get(Verbraucher, vid)
+        if verbraucher:
+            verbraucher.laufzeit_h = stunden
+
+    label = {"1": "1h/Werktag", "8": "8h/Werktag", "24": "24/7"}.get(wert, f"{wert}h")
+    await query.edit_message_text(f"✅ Laufzeit für #{vid}: {label}")
+
+
 def get_bestaetigung_callback_handler():
     """Erstellt den CallbackQueryHandler für Bestätigungen."""
     return CallbackQueryHandler(bestaetigung_callback, pattern=r"^(ok|edit|del)_\d+$")
+
+
+def get_laufzeit_callback_handler():
+    """Erstellt den CallbackQueryHandler für Laufzeit-Auswahl."""
+    return CallbackQueryHandler(laufzeit_callback, pattern=r"^lz_")
