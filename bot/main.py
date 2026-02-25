@@ -16,6 +16,7 @@ from bot.handlers.standort import (
     status_command,
     hilfe_command,
     get_standort_callback_handler,
+    standort_location,
 )
 from bot.handlers.scan import foto_scan, sprach_notiz, text_notiz, get_bestaetigung_callback_handler, get_laufzeit_callback_handler, get_leistung_vorschlag_callback_handler
 from bot.handlers.liste import liste_command, suche_command
@@ -60,6 +61,7 @@ def main():
 
     # 4. Nachrichten-Handler (Fotos = Typenschild-Scan, Text/Sprache = Notizen)
     app.add_handler(MessageHandler(filters.PHOTO, foto_scan))
+    app.add_handler(MessageHandler(filters.LOCATION, standort_location))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, text_notiz))
     app.add_handler(MessageHandler(filters.VOICE, sprach_notiz))
 

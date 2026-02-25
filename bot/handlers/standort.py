@@ -1,10 +1,14 @@
 """Handler für /standort, /wechsel, /status, /hilfe – Standortverwaltung."""
+import logging
+import requests
 from telegram import Update
 from telegram.ext import ContextTypes, CallbackQueryHandler
 
 from db.database import get_session
 from db.models import Benutzer, Standort, Verbraucher
 from bot.keyboards import standort_auswahl_keyboard
+
+logger = logging.getLogger(__name__)
 
 
 async def standort_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -37,10 +41,12 @@ async def standort_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"✅ Standort \"{standortname}\" angelegt und aktiviert.\n\n"
         f"Du kannst jetzt Typenschilder scannen:\n"
         f"📷 Foto vom Typenschild senden → KI liest die Daten aus\n"
+        f"� **Standort teilen** → Adresse wird automatisch hinterlegt\n"
         f"🎤 Sprachnachricht → Zusätzliche Notizen diktieren\n"
         f"📝 Text → Ergänzungen eingeben\n\n"
         f"/liste – Alle erfassten Verbraucher\n"
-        f"/bericht – Standort-Report als PDF"
+        f"/bericht – Standort-Report als PDF",
+        parse_mode="Markdown",
     )
 
 
@@ -158,7 +164,8 @@ async def hilfe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
         "⚡ **Typenschild-Scanner – Befehle**\n\n"
         "📷 **Foto senden** → Typenschild wird automatisch ausgelesen\n"
-        "🎤 **Sprachnachricht** → Notizen zum letzten Gerät\n"
+        "� **Standort teilen** → Adresse automatisch hinterlegen\n"
+        "�🎤 **Sprachnachricht** → Notizen zum letzten Gerät\n"
         "📝 **Text senden** → Ergänzungen zum letzten Gerät\n\n"
         "**Standort-Verwaltung:**\n"
         "/standort <Name> – Neuen Standort anlegen\n"
@@ -178,3 +185,76 @@ async def hilfe_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def get_standort_callback_handler():
     """Erstellt den CallbackQueryHandler für die Standortauswahl."""
     return CallbackQueryHandler(standort_auswahl_callback, pattern=r"^standort_\d+$")
+
+
+async def standort_location(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Verarbeitet geteilten Standort – Reverse Geocoding für Adresse."""
+    telegram_id = update.effective_user.id
+    location = update.message.location
+
+    if not location:
+        return
+
+    lat = location.latitude
+    lon = location.longitude
+
+    with get_session() as session:
+        benutzer = session.query(Benutzer).filter_by(telegram_id=telegram_id).first()
+        if not benutzer or not benutzer.aktiver_standort_id:
+            await update.message.reply_text(
+                "Kein aktiver Standort. Erstelle einen mit /standort <Name>"
+            )
+            return
+
+        standort = session.get(Standort, benutzer.aktiver_standort_id)
+        if not standort:
+            await update.message.reply_text("Standort nicht gefunden.")
+            return
+
+        # Reverse Geocoding über OpenStreetMap Nominatim (kostenlos)
+        adresse_text = None
+        try:
+            resp = requests.get(
+                "https://nominatim.openstreetmap.org/reverse",
+                params={
+                    "lat": lat,
+                    "lon": lon,
+                    "format": "json",
+                    "addressdetails": 1,
+                    "accept-language": "de",
+                },
+                headers={"User-Agent": "TypenschildScanner/1.0"},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            addr = data.get("address", {})
+
+            # Adresse zusammenbauen
+            strasse = addr.get("road", "")
+            hausnr = addr.get("house_number", "")
+            plz = addr.get("postcode", "")
+            ort = addr.get("city") or addr.get("town") or addr.get("village") or addr.get("municipality", "")
+
+            teile = []
+            if strasse:
+                teile.append(f"{strasse} {hausnr}".strip())
+            if plz or ort:
+                teile.append(f"{plz} {ort}".strip())
+
+            adresse_text = ", ".join(teile) if teile else data.get("display_name", "")
+
+        except Exception as e:
+            logger.error(f"Reverse Geocoding fehlgeschlagen: {e}")
+            adresse_text = f"{lat:.6f}, {lon:.6f}"
+
+        # Adresse + Koordinaten speichern
+        standort.adresse = adresse_text
+        standort_name = standort.name
+
+    await update.message.reply_text(
+        f"🎯 **Adresse hinterlegt für** \"{standort_name}\":\n"
+        f"📍 {adresse_text}\n\n"
+        f"📷 Jetzt Typenschilder scannen!",
+        parse_mode="Markdown",
+    )
